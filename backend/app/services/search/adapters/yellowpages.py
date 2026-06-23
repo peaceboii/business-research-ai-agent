@@ -53,14 +53,14 @@ class YellowPagesAdapter(BaseDiscoveryAdapter):
                         source_url=yp_url
                     ))
             
-            # Simulation fallback if no candidates found
+            # Return empty if no candidates found
             if not candidates:
-                logger.info("YellowPagesAdapter: Empty results or blocked. Falling back to simulation.")
-                candidates = self._simulate_discovery(category, location)
+                logger.info("YellowPagesAdapter: Empty results or blocked. Returning empty list.")
+                candidates = []
 
         except Exception as e:
-            logger.error(f"YellowPagesAdapter error: {e}. Falling back to simulation.")
-            candidates = self._simulate_discovery(category, location)
+            logger.error(f"YellowPagesAdapter error: {e}. Returning empty list.")
+            candidates = []
 
         return candidates
 
