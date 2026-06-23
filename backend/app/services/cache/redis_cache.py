@@ -12,7 +12,7 @@ class CacheService:
         self._init_redis()
 
     def _init_redis(self):
-        redis_host = os.getenv("REDIS_HOST", "localhost")
+        redis_host = os.getenv("REDIS_HOST", "127.0.0.1")
         redis_port = int(os.getenv("REDIS_PORT", 6379))
         redis_db = int(os.getenv("REDIS_DB", 0))
         
@@ -23,7 +23,8 @@ class CacheService:
                 port=redis_port,
                 db=redis_db,
                 decode_responses=True,
-                socket_connect_timeout=2.0
+                socket_connect_timeout=2.0,
+                socket_timeout=2.0
             )
             # Ping to verify connection
             self.redis_client.ping()

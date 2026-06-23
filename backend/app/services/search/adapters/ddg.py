@@ -19,7 +19,6 @@ class DuckDuckGoAdapter(BaseDiscoveryAdapter):
             # We run DDGS search in an executor or use it directly.
             # We can run it in a threadpool to prevent blocking the async loop.
             import asyncio
-            from concurrent.futures import ThreadPoolExecutor
 
             def run_search():
                 with DDGS() as ddgs:
@@ -32,8 +31,7 @@ class DuckDuckGoAdapter(BaseDiscoveryAdapter):
                     return results
 
             loop = asyncio.get_running_loop()
-            with ThreadPoolExecutor() as pool:
-                results = await loop.run_in_executor(pool, run_search)
+            results = await loop.run_in_executor(None, run_search)
 
             for item in results:
                 title = item.get("title", "")

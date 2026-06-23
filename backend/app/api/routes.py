@@ -61,10 +61,27 @@ async def stream_research_progress(query_id: int, db: Session = Depends(get_db))
 
     async def sse_event_generator():
         try:
+            # Safe wrapper to catch exceptions and ensure client gets failed status
+            async def run_safe():
+                try:
+                    await global_research_runner.run_research(query_record.query_text, db, queue)
+                except Exception as e:
+                    logger.exception(f"ResearchRunner: Exception in run_research for Query {query_id}")
+                    try:
+                        query_record.status = "failed"
+                        db.commit()
+                    except Exception:
+                        db.rollback()
+                    await queue.put({
+                        "status": "failed",
+                        "message": f"Search execution failed: {str(e)}",
+                        "query_id": query_id,
+                        "timestamp": datetime.datetime.utcnow().isoformat(),
+                        "data": None
+                    })
+
             # Start runner task in background
-            runner_task = asyncio.create_task(
-                global_research_runner.run_research(query_record.query_text, db, queue)
-            )
+            runner_task = asyncio.create_task(run_safe())
             
             while True:
                 # Read status updates from queue

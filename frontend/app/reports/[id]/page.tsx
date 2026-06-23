@@ -43,7 +43,7 @@ export default function ReportPage({ params: paramsPromise }: { params: Promise<
     setLoading(true);
     try {
       // Fetch report
-      const repRes = await fetch(`http://localhost:8000/api/reports/${queryId}`);
+      const repRes = await fetch(`http://127.0.0.1:8000/api/reports/${queryId}`);
       let repData = null;
       if (repRes.ok) {
         repData = await repRes.json();
@@ -51,7 +51,7 @@ export default function ReportPage({ params: paramsPromise }: { params: Promise<
       }
 
       // Fetch all businesses for this query to build charts
-      const bizRes = await fetch(`http://localhost:8000/api/businesses?query_id=${queryId}&limit=500`);
+      const bizRes = await fetch(`http://127.0.0.1:8000/api/businesses?query_id=${queryId}&limit=500`);
       if (bizRes.ok) {
         const bizData = await bizRes.json();
         setBusinesses(bizData);

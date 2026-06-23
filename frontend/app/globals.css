@@ -1,13 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  /* Business-minded dark palette */
-  --bg-deep: #07090e;
-  --bg-surface: #0f131a;
-  --bg-surface-hover: #161c27;
-  --border-glow: rgba(99, 102, 241, 0.15);
+  /* Premium Dark Space-Navy Palette */
+  --bg-deep: #050811;
+  --bg-surface: #0a0e17;
+  --bg-surface-hover: #121824;
+  --indigo-accent: #5a62f6;
+  --indigo-glow: rgba(90, 98, 246, 0.15);
   
-  --background: #07090e;
+  --background: #050811;
   --foreground: #f1f5f9;
 }
 
@@ -16,55 +17,96 @@ body {
   color: var(--foreground) !important;
   font-family: var(--font-sans), system-ui, sans-serif;
   overflow-x: hidden;
+  /* Ambient grid glow mesh */
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(90, 98, 246, 0.08) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.06) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(59, 130, 246, 0.05) 0px, transparent 50%),
+    radial-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 0);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 30px 30px;
+  background-attachment: fixed;
 }
 
-/* 3D Glassmorphism Cards with Beveled Borders and Deep Shadows */
+/* 3D Glassmorphism Cards with Beveled Borders and Depth Shadows */
 .card-3d {
-  background: linear-gradient(135deg, rgba(20, 26, 38, 0.7) 0%, rgba(13, 17, 24, 0.9) 100%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.06) !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.12) !important; /* light source from top */
+  background: linear-gradient(135deg, rgba(16, 22, 38, 0.75) 0%, rgba(10, 14, 23, 0.9) 100%) !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.05) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.4) !important;
+  border-top: 1px solid rgba(90, 98, 246, 0.25) !important; /* Top light source highlight */
   box-shadow: 
-    0 15px 35px -5px rgba(0, 0, 0, 0.8),
+    0 12px 28px -8px rgba(0, 0, 0, 0.75),
     inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
   transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
-  position: relative;
+  transform-style: preserve-3d;
+  will-change: transform, box-shadow;
 }
 
 .card-3d:hover {
-  transform: translateY(-4px) scale(1.01) !important;
-  border-color: rgba(99, 102, 241, 0.3) !important;
+  transform: translateY(-4px) translateZ(8px) !important;
+  border-top-color: rgba(90, 98, 246, 0.5) !important;
+  border-left-color: rgba(255, 255, 255, 0.1) !important;
+  border-right-color: rgba(255, 255, 255, 0.1) !important;
   box-shadow: 
-    0 25px 50px -12px rgba(0, 0, 0, 0.9),
-    0 0 20px 2px rgba(99, 102, 241, 0.1),
+    0 24px 48px -12px rgba(0, 0, 0, 0.9),
+    0 0 25px 2px rgba(90, 98, 246, 0.12),
     inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
 }
 
-/* 3D Buttons with tactile press effect */
+/* 3D Tactile Buttons with Press Depth Effect */
 .btn-3d {
-  background: linear-gradient(180deg, #4f46e5 0%, #3730a3 100%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.2) !important;
+  background: linear-gradient(180deg, #5a62f6 0%, #4046d3 100%) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.35) !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.3) !important;
   box-shadow: 
-    0 4px 6px -1px rgba(0, 0, 0, 0.5),
-    0 1px 3px -1px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
-  transition: all 0.1s ease !important;
-  position: relative;
+    0 4px 0 #282d9f,
+    0 8px 16px -2px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+  transition: all 0.1s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
   cursor: pointer;
 }
 
-.btn-3d:active {
-  transform: translateY(1.5px) !important;
-  box-shadow: 
-    0 2px 3px -1px rgba(0, 0, 0, 0.5),
-    inset 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+.btn-3d:hover {
+  filter: brightness(1.08);
 }
 
-/* Background grid glow */
-.bg-grid-glow {
-  background-size: 40px 40px;
-  background-image: 
-    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-  position: relative;
+.btn-3d:active {
+  transform: translateY(3px) !important;
+  box-shadow: 
+    0 1px 0 #282d9f,
+    0 2px 4px rgba(0, 0, 0, 0.4),
+    inset 0 1px 4px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #050811;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1a2235;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #273452;
+}
+
+/* Ambient glow circles behind containers */
+.ambient-glow {
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(90, 98, 246, 0.1) 0%, transparent 70%);
+  filter: blur(40px);
+  pointer-events: none;
+  z-index: 0;
 }
