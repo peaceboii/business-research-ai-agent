@@ -25,7 +25,7 @@ function ResearchContent() {
     if (!queryId) return;
 
     // Connect to SSE stream
-    const eventSource = new EventSource(`http://127.0.0.1:8000/api/research/${queryId}/stream`);
+    const eventSource = new EventSource(`http://${window.location.hostname}:8000/api/research/${queryId}/stream`);
 
     eventSource.onmessage = (event) => {
       try {

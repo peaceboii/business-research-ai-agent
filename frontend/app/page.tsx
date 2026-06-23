@@ -18,6 +18,13 @@ interface StatItem {
   }>;
 }
 
+const getApiBase = () => {
+  if (typeof window !== "undefined") {
+    return `http://${window.location.hostname}:8000/api`;
+  }
+  return "http://127.0.0.1:8000/api";
+};
+
 export default function Dashboard() {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -39,7 +46,7 @@ export default function Dashboard() {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/stats");
+      const res = await fetch(`${getApiBase()}/stats`);
       if (res.ok) {
         const data = await res.json();
         setStats(data);
@@ -55,7 +62,7 @@ export default function Dashboard() {
     if (!searchQuery.trim()) return;
     setLoading(true);
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/research", {
+      const res = await fetch(`${getApiBase()}/research`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query: searchQuery }),
