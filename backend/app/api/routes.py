@@ -150,7 +150,7 @@ def get_business(biz_id: int, db: Session = Depends(get_db)):
 
 @router.get("/reports/{query_id}", response_model=ResearchReportResponse)
 def get_report_by_query(query_id: int, db: Session = Depends(get_db)):
-    report = db.query(ResearchReport).filter(ResearchReport.query_id == query_id).first()
+    report = db.query(ResearchReport).filter(ResearchReport.query_id == query_id).order_by(desc(ResearchReport.id)).first()
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
     return report
