@@ -9,7 +9,19 @@ from app.utils.http_utils import get_random_user_agent, check_robots_txt
 class WebsiteAnalyzer:
     def __init__(self):
         # Compiled patterns for extraction
-        self.phone_pattern = re.compile(r'\b(?:\+?1[-.\s]?)?\(?([2-9][0-8][0-9])\)?[-.\s]?([2-9][0-9]{2})[-.\s]?([0-9]{4})\b')
+        self.phone_pattern = re.compile(
+            r'(?:'
+            r'(?:\+?1[-.\s]?)?\(?([2-9][0-8][0-9])\)?[-.\s]?([2-9][0-9]{2})[-.\s]?([0-9]{4})'
+            r'|'
+            r'\+?[91]{2,3}[-.\s]?\(?[0-9]{2,5}\)?[-.\s]?[0-9]{3,4}[-.\s]?[0-9]{4,6}'
+            r'|'
+            r'\+?[0-9]{1,4}[-.\s]?\(?[0-9]{2,5}\)?[-.\s]?[0-9]{3,4}[-.\s]?[0-9]{3,6}'
+            r'|'
+            r'\b[6-9]\d{9}\b'
+            r'|'
+            r'\b\d{2,5}[-.\s]?\d{5,8}\b'
+            r')'
+        )
         self.email_pattern = re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b')
         self.social_patterns = [
             "facebook.com", "linkedin.com", "twitter.com", "x.com", 
@@ -105,13 +117,19 @@ class WebsiteAnalyzer:
                 await browser.close()
 
     def _parse_html(self, soup: BeautifulSoup, raw_html: str) -> Dict[str, Any]:
-        text_content = soup.get_text(" ")
+        text_content = soup.get_text("\n")
         
         # Phone extraction
         phones = []
         for match in self.phone_pattern.finditer(text_content):
-            formatted = f"({match.group(1)}) {match.group(2)}-{match.group(3)}"
-            phones.append(formatted)
+            if match.group(1) and match.group(2) and match.group(3):
+                formatted = f"({match.group(1)}) {match.group(2)}-{match.group(3)}"
+            else:
+                num = match.group(0).strip()
+                num = re.sub(r'^[^\d+({]+|[^\d)]+$', '', num)
+                formatted = num
+            if len(re.sub(r'\D', '', formatted)) >= 7:
+                phones.append(formatted)
         
         phone = phones[0] if phones else None
 
@@ -137,6 +155,9 @@ class WebsiteAnalyzer:
         # Working Hours
         working_hours = self._extract_working_hours(text_content)
 
+        # Address extraction
+        address = self._extract_address(text_content)
+
         # Services, Certifications, Awards
         services = self._extract_list_by_keywords(soup, text_content, ["service", "treatment", "repair", "expertise", "specialty"])
         certifications = self._extract_list_by_keywords(soup, text_content, ["certif", "license", "accredit", "board certified"])
@@ -145,6 +166,7 @@ class WebsiteAnalyzer:
         return {
             "phone": phone,
             "email": email,
+            "address": address,
             "working_hours": working_hours,
             "services": services[:10],  # cap at 10 items
             "specialties": services[:5],
@@ -152,6 +174,35 @@ class WebsiteAnalyzer:
             "awards": awards[:5],
             "social_profiles": social_profiles[:5],
         }
+
+    def _extract_address(self, text: str) -> Optional[str]:
+        lines = [l.strip() for l in text.split('\n') if l.strip()]
+        
+        # Try looking for "Address" keyword explicitly (excluding contact labels)
+        pattern = re.compile(r'\b(?:address|location|office|hq|headquarters)\b\s*:?\s*(.*)', re.IGNORECASE)
+        for i, line in enumerate(lines):
+            match = pattern.match(line)
+            if match:
+                address_candidate = match.group(1).strip()
+                if len(address_candidate) > 10:
+                    return address_candidate
+                if i + 1 < len(lines):
+                    next_line = lines[i+1].strip()
+                    if len(next_line) > 10 and not any(kw in next_line.lower() for kw in ['phone', 'email', 'website', 'fax']):
+                        if i + 2 < len(lines):
+                            next_next_line = lines[i+2].strip()
+                            if len(next_next_line) > 5 and (any(kw in next_next_line.lower() for kw in ['india', 'tamil', 'usa', 'state', 'pincode', 'zip', 'country']) or re.search(r'\b\d{5,6}\b', next_next_line)):
+                                return f"{next_line}, {next_next_line}"
+                        return next_line
+                        
+        # Alternate fallback: look for postal code patterns (5 or 6 digits) on lines with address indicators
+        zip_pattern = re.compile(r'\b\d{5,6}\b')
+        for line in lines:
+            if zip_pattern.search(line):
+                if any(marker in line.lower() for marker in ['street', 'road', 'nagar', 'complex', 'building', 'floor', 'block', 'st.', 'rd.', 'ave', 'highway', 'puram', 'colony', 'plaza']):
+                    if len(line) > 15 and len(line) < 150:
+                        return line
+        return None
 
     def _extract_working_hours(self, text: str) -> Dict[str, str]:
         """

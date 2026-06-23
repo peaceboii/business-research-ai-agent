@@ -21,7 +21,8 @@ class ResearchRunner:
         self,
         query_text: str,
         db: Session,
-        queue: Optional[asyncio.Queue] = None
+        queue: Optional[asyncio.Queue] = None,
+        query_id: Optional[int] = None
     ) -> Query:
         """
         Orchestrates the entire research pipeline:
@@ -40,15 +41,33 @@ class ResearchRunner:
         category = parsed.get("category") or "business"
         location = parsed.get("location") or "local"
         
-        query_record = Query(
-            query_text=query_text,
-            category=category,
-            location=location,
-            status="running"
-        )
-        db.add(query_record)
-        db.commit()
-        db.refresh(query_record)
+        if query_id:
+            query_record = db.query(Query).filter(Query.id == query_id).first()
+            if query_record:
+                query_record.category = category
+                query_record.location = location
+                query_record.status = "running"
+                db.commit()
+            else:
+                query_record = Query(
+                    query_text=query_text,
+                    category=category,
+                    location=location,
+                    status="running"
+                )
+                db.add(query_record)
+                db.commit()
+                db.refresh(query_record)
+        else:
+            query_record = Query(
+                query_text=query_text,
+                category=category,
+                location=location,
+                status="running"
+            )
+            db.add(query_record)
+            db.commit()
+            db.refresh(query_record)
         
         logger.info(f"ResearchRunner: Starting run {query_record.id} for '{query_text}'")
         

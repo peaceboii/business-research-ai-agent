@@ -66,11 +66,30 @@ class VerificationEngine:
                 
             # Basic normalization for phone numbers
             if field_name == "phone":
-                val_str = "".join(filter(str.isdigit, val_str))
-                if len(val_str) == 10:
-                    val_str = f"({val_str[:3]}) {val_str[3:6]}-{val_str[6:]}"
-                elif len(val_str) == 11 and val_str.startswith("1"):
-                    val_str = f"({val_str[1:4]}) {val_str[4:7]}-{val_str[7:]}"
+                has_plus = val_str.strip().startswith("+")
+                digits = "".join(filter(str.isdigit, val_str))
+                
+                # Smart check if it looks like a US number vs international (e.g. Indian) number
+                is_us = False
+                if len(digits) == 10:
+                    # Look at candidates' addresses to see if it contains Indian keywords
+                    is_indian = any(
+                        cand.address and any(k in cand.address.lower() for k in ["india", "tamil", "karnataka", "delhi", "mumbai", "chennai", "bangalore", "630"])
+                        for cand in candidates
+                    )
+                    if not is_indian:
+                        is_us = True
+                elif len(digits) == 11 and digits.startswith("1"):
+                    is_us = True
+                
+                if is_us:
+                    if len(digits) == 10:
+                        val_str = f"({digits[:3]}) {digits[3:6]}-{digits[6:]}"
+                    elif len(digits) == 11:
+                        val_str = f"({digits[1:4]}) {digits[4:7]}-{digits[7:]}"
+                else:
+                    # Non-US number: preserve digits, add leading + back if original had it
+                    val_str = ("+" if has_plus else "") + digits
                     
             if val_str not in field_values[field_name]:
                 field_values[field_name][val_str] = []
@@ -89,6 +108,7 @@ class VerificationEngine:
         if website_details:
             site_url = website_details.get("website_url") or candidates[0].website or "website"
             record_field("phone", website_details.get("phone"), "official_website", site_url)
+            record_field("address", website_details.get("address"), "official_website", site_url)
             record_field("email", website_details.get("email"), "official_website", site_url)
             record_field("working_hours", website_details.get("working_hours"), "official_website", site_url)
 

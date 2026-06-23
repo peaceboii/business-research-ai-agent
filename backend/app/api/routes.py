@@ -64,7 +64,7 @@ async def stream_research_progress(query_id: int, db: Session = Depends(get_db))
             # Safe wrapper to catch exceptions and ensure client gets failed status
             async def run_safe():
                 try:
-                    await global_research_runner.run_research(query_record.query_text, db, queue)
+                    await global_research_runner.run_research(query_record.query_text, db, queue, query_id=query_id)
                 except Exception as e:
                     logger.exception(f"ResearchRunner: Exception in run_research for Query {query_id}")
                     try:
