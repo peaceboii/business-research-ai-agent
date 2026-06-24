@@ -99,6 +99,7 @@ class YellowPagesAdapter(BaseDiscoveryAdapter):
                 website=website,
                 source_name=self.source_name,
                 source_url=f"https://www.yellowpages.com/biz/{domain_name}",
+                is_simulated=True,
             ))
             
         return candidates

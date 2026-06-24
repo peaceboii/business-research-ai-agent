@@ -42,6 +42,15 @@ class DiscoveryEngine:
             all_candidates.extend(candidate_list)
             
         logger.info(f"DiscoveryEngine: Discovery complete. Found {len(all_candidates)} raw candidate records.")
+        
+        # If we have any real (non-simulated) candidates, filter out the simulated ones
+        real_candidates = [c for c in all_candidates if not getattr(c, "is_simulated", False)]
+        if real_candidates:
+            simulated_count = len(all_candidates) - len(real_candidates)
+            if simulated_count > 0:
+                logger.info(f"DiscoveryEngine: Real candidates found. Filtering out {simulated_count} simulated candidates to prioritize real data.")
+            return real_candidates
+            
         return all_candidates
 
     async def _safe_discover(self, adapter: BaseDiscoveryAdapter, category: str, location: str) -> List[RawBusinessCandidate]:

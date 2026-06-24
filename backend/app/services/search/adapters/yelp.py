@@ -136,6 +136,7 @@ class YelpAdapter(BaseDiscoveryAdapter):
                 review_count=random.randint(10, 350),
                 source_name=self.source_name,
                 source_url=f"https://www.yelp.com/biz/{domain_name}-{loc_title.lower()}",
+                is_simulated=True,
             ))
             
         return candidates

@@ -98,11 +98,19 @@ class VerificationEngine:
 
         # Record from candidates
         for cand in candidates:
-            record_field("phone", cand.phone, cand.source_name, cand.source_url)
-            record_field("address", cand.address, cand.source_name, cand.source_url)
-            record_field("email", cand.email, cand.source_name, cand.source_url)
-            record_field("website", cand.website, cand.source_name, cand.source_url)
-            record_field("working_hours", cand.working_hours, cand.source_name, cand.source_url)
+            src_name = cand.source_name
+            src_url = cand.source_url
+            if getattr(cand, "is_simulated", False):
+                src_name = f"{src_name}_simulated"
+                if src_url:
+                    src_url = f"{src_url}#simulated"
+                else:
+                    src_url = f"simulated://{cand.source_name}"
+            record_field("phone", cand.phone, src_name, src_url)
+            record_field("address", cand.address, src_name, src_url)
+            record_field("email", cand.email, src_name, src_url)
+            record_field("website", cand.website, src_name, src_url)
+            record_field("working_hours", cand.working_hours, src_name, src_url)
 
         # Record from official website details (if we crawled it)
         if website_details:
@@ -215,34 +223,43 @@ class VerificationEngine:
         
         # Check phone verification
         phone_sources = source_urls_mapping.get("phone", [])
-        if phone_sources:
+        real_phone_sources = [s for s in phone_sources if "simulated" not in s.lower()]
+        if real_phone_sources:
             # Score contribution based on max weight source
-            max_w = max([get_source_weight(s.split("//")[-1].split("/")[0]) if "://" in s else get_source_weight(s) for s in phone_sources])
+            max_w = max([get_source_weight(s.split("//")[-1].split("/")[0]) if "://" in s else get_source_weight(s) for s in real_phone_sources])
             # Multi-source bonus
-            bonus = 15 if len(phone_sources) > 1 else 0
+            bonus = 15 if len(real_phone_sources) > 1 else 0
             score_components.append(min(max_w + bonus, 100))
         else:
             score_components.append(0)
 
         # Check website verification
         web_sources = source_urls_mapping.get("website", [])
-        if web_sources:
-            max_w = max([get_source_weight(s.split("//")[-1].split("/")[0]) if "://" in s else get_source_weight(s) for s in web_sources])
-            bonus = 10 if len(web_sources) > 1 else 0
+        real_web_sources = [s for s in web_sources if "simulated" not in s.lower()]
+        if real_web_sources:
+            max_w = max([get_source_weight(s.split("//")[-1].split("/")[0]) if "://" in s else get_source_weight(s) for s in real_web_sources])
+            bonus = 10 if len(real_web_sources) > 1 else 0
             score_components.append(min(max_w + bonus, 100))
         else:
             score_components.append(0)
 
         # Check address verification
         addr_sources = source_urls_mapping.get("address", [])
-        if addr_sources:
-            max_w = max([get_source_weight(s.split("//")[-1].split("/")[0]) if "://" in s else get_source_weight(s) for s in addr_sources])
-            bonus = 10 if len(addr_sources) > 1 else 0
+        real_addr_sources = [s for s in addr_sources if "simulated" not in s.lower()]
+        if real_addr_sources:
+            max_w = max([get_source_weight(s.split("//")[-1].split("/")[0]) if "://" in s else get_source_weight(s) for s in real_addr_sources])
+            bonus = 10 if len(real_addr_sources) > 1 else 0
             score_components.append(min(max_w + bonus, 100))
         else:
             score_components.append(0)
 
         verification_score = round(sum(score_components) / len(score_components), 1) if score_components else 0.0
+
+        # If it is entirely simulated candidates, cap the verification score at a low value (e.g. 5.0)
+        # to prevent it from showing up as "highly verified"
+        all_simulated = all(getattr(cand, "is_simulated", False) for cand in candidates)
+        if all_simulated:
+            verification_score = 5.0
 
         # Choose the most complete business name (the longest or first)
         names = [cand.name for cand in candidates if cand.name]

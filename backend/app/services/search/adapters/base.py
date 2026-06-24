@@ -18,6 +18,7 @@ class RawBusinessCandidate(BaseModel):
     certifications: List[str] = Field(default_factory=list)
     awards: List[str] = Field(default_factory=list)
     social_profiles: List[str] = Field(default_factory=list)
+    is_simulated: bool = False
 
 class BaseDiscoveryAdapter(ABC):
     @property
