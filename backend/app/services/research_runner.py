@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from loguru import logger
 
 from app.models.models import Query, Business, BusinessSource, VerificationLog, Conflict, ResearchReport, CacheStat
+from app.services.search.adapters.base import RawBusinessCandidate
 from app.services.search.query_understanding import parse_query
 from app.services.search.discovery import global_discovery_engine
 from app.services.deduplication.dedup import global_deduplicator
