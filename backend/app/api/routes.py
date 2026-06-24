@@ -66,6 +66,8 @@ async def stream_research_progress(query_id: int, db: Session = Depends(get_db))
                 try:
                     await global_research_runner.run_research(query_record.query_text, db, queue, query_id=query_id)
                 except Exception as e:
+                    import traceback
+                    tb_str = traceback.format_exc()
                     logger.exception(f"ResearchRunner: Exception in run_research for Query {query_id}")
                     try:
                         query_record.status = "failed"
@@ -74,7 +76,7 @@ async def stream_research_progress(query_id: int, db: Session = Depends(get_db))
                         db.rollback()
                     await queue.put({
                         "status": "failed",
-                        "message": f"Search execution failed: {str(e)}",
+                        "message": f"Search execution failed: {str(e)}\n{tb_str}",
                         "query_id": query_id,
                         "timestamp": datetime.datetime.utcnow().isoformat(),
                         "data": None
