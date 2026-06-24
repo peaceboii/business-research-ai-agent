@@ -7,14 +7,14 @@ import {
   AlertTriangle, Check, RefreshCw, Star, Clock, FileText, Award, BadgeCheck 
 } from "lucide-react";
 
-const getApiBase = () => {
-  if (typeof window !== "undefined") {
-    return `http://${window.location.hostname}:8000/api`;
-  }
-  return "http://127.0.0.1:8000/api";
-};
-
 export default function BusinessesPage() {
+  // API base state to prevent SSR hydration mismatch
+  const [apiBase, setApiBase] = useState("http://localhost:8000/api");
+
+  useEffect(() => {
+    setApiBase(`http://${window.location.hostname}:8000/api`);
+  }, []);
+
   // Query state
   const [search, setSearch] = useState("");
   const [minScore, setMinScore] = useState(0);
@@ -50,7 +50,7 @@ export default function BusinessesPage() {
     setLoading(true);
     try {
       const skip = (page - 1) * limit;
-      let url = `${getApiBase()}/businesses?skip=${skip}&limit=${limit}`;
+      let url = `${apiBase}/businesses?skip=${skip}&limit=${limit}`;
       if (search) url += `&search=${encodeURIComponent(search)}`;
       if (minScore > 0) url += `&min_verification_score=${minScore}`;
       
@@ -69,7 +69,7 @@ export default function BusinessesPage() {
   const fetchConflicts = async (bizId: number) => {
     try {
       // List all conflicts
-      const res = await fetch(`${getApiBase()}/conflicts?resolved=false`);
+      const res = await fetch(`${apiBase}/conflicts?resolved=false`);
       if (res.ok) {
         const data = await res.json();
         // Filter to conflicts for the selected business
@@ -84,7 +84,7 @@ export default function BusinessesPage() {
   const resolveConflict = async (conflictId: number, resolvedValue: string) => {
     setConflictResolving(conflictId);
     try {
-      const res = await fetch(`${getApiBase()}/conflicts/${conflictId}/resolve`, {
+      const res = await fetch(`${apiBase}/conflicts/${conflictId}/resolve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ resolved_value: resolvedValue })
@@ -92,7 +92,7 @@ export default function BusinessesPage() {
       if (res.ok) {
         // Refresh details
         if (selectedBiz) {
-          const bizRes = await fetch(`${getApiBase()}/businesses/${selectedBiz.id}`);
+          const bizRes = await fetch(`${apiBase}/businesses/${selectedBiz.id}`);
           if (bizRes.ok) {
             const updatedBiz = await bizRes.json();
             setSelectedBiz(updatedBiz);
@@ -119,7 +119,7 @@ export default function BusinessesPage() {
     formData.append("file", file);
 
     try {
-      const res = await fetch(`${getApiBase()}/businesses/import/csv`, {
+      const res = await fetch(`${apiBase}/businesses/import/csv`, {
         method: "POST",
         body: formData,
       });
@@ -172,14 +172,14 @@ export default function BusinessesPage() {
           </button>
           
           <a
-            href={`${getApiBase()}/businesses/export/csv`}
+            href={`${apiBase}/businesses/export/csv`}
             className="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 font-semibold px-4 py-2 rounded-xl transition-all flex items-center space-x-2 text-sm"
           >
             <Download className="h-4 w-4" />
             <span>Export CSV</span>
           </a>
           <a
-            href={`${getApiBase()}/businesses/export/json`}
+            href={`${apiBase}/businesses/export/json`}
             className="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 font-semibold px-4 py-2 rounded-xl transition-all flex items-center space-x-2 text-sm"
           >
             <Download className="h-4 w-4" />
