@@ -3,6 +3,7 @@ from typing import List
 from loguru import logger
 from app.services.search.adapters.base import BaseDiscoveryAdapter, RawBusinessCandidate
 from app.services.search.adapters.ddg import DuckDuckGoAdapter
+from app.services.search.adapters.yahoo import YahooAdapter
 from app.services.search.adapters.yelp import YelpAdapter
 from app.services.search.adapters.yellowpages import YellowPagesAdapter
 from app.services.search.adapters.industry import HealthgradesAdapter, AvvoAdapter, AngiAdapter
@@ -12,6 +13,7 @@ class DiscoveryEngine:
         # Register all available adapters
         self.adapters: List[BaseDiscoveryAdapter] = [
             DuckDuckGoAdapter(),
+            YahooAdapter(),
             YelpAdapter(),
             YellowPagesAdapter(),
             HealthgradesAdapter(),
