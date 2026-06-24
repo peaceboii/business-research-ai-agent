@@ -150,7 +150,14 @@ class WebsiteAnalyzer:
         
         logger.info(f"WebsiteAnalyzer: Launching Playwright browser for {url}")
         async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
+            browser = await p.chromium.launch(
+                headless=True,
+                args=[
+                    "--no-sandbox",
+                    "--disable-setuid-sandbox",
+                    "--disable-dev-shm-usage"
+                ]
+            )
             context = await browser.new_context(
                 user_agent=get_random_user_agent(),
                 viewport={"width": 1280, "height": 800}
