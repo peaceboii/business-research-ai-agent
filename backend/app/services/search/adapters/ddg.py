@@ -156,6 +156,19 @@ class DuckDuckGoAdapter(BaseDiscoveryAdapter):
                     )
                     if general_match:
                         address = general_match.group(0).strip()
+                
+                # Validate extracted address quality - reject garbage
+                if address:
+                    addr_lower = address.lower().strip()
+                    # Must have digits (house number, zip, etc.)
+                    if not re.search(r'\d', address):
+                        address = None
+                    # Reject suspiciously short or long
+                    elif len(address) < 12 or len(address) > 200:
+                        address = None
+                    # Reject if it starts with generic navigation words
+                    elif re.match(r'^(space|rent|shop|buy|sell|find|top|best|leading|our|the|a |an )', addr_lower):
+                        address = None
 
                 # Clean name: remove website suffixes
                 clean_name = title

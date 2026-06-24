@@ -13,11 +13,17 @@ function BusinessesContent() {
   const searchParams = useSearchParams();
   const queryIdParam = searchParams.get("query_id");
 
-  // API base state to prevent SSR hydration mismatch
-  const [apiBase, setApiBase] = useState("http://localhost:8000/api");
+  // Resolve API base URL once on mount, using a ref to avoid hydration mismatch.
+  // The ref starts null to guard against premature fetches during SSR.
+  const apiBaseRef = useRef<string | null>(null);
+  const [apiBase, setApiBase] = useState<string>("");
+  const [apiReady, setApiReady] = useState(false);
 
   useEffect(() => {
-    setApiBase(getApiUrl());
+    const url = getApiUrl();
+    apiBaseRef.current = url;
+    setApiBase(url);
+    setApiReady(true);
   }, []);
 
   // Query state
@@ -42,20 +48,26 @@ function BusinessesContent() {
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    fetchBusinesses();
-  }, [search, minScore, sortBy, page, apiBase, queryIdParam]);
+    // Only fetch once the API URL has been resolved client-side
+    if (apiReady) {
+      fetchBusinesses();
+    }
+  }, [search, minScore, sortBy, page, apiReady, queryIdParam]);
 
   useEffect(() => {
-    if (selectedBiz) {
+    if (selectedBiz && apiReady) {
       fetchConflicts(selectedBiz.id);
     }
-  }, [selectedBiz]);
+  }, [selectedBiz, apiReady]);
 
   const fetchBusinesses = async () => {
+    const base = apiBaseRef.current;
+    if (!base) return;
+    
     setLoading(true);
     try {
       const skip = (page - 1) * limit;
-      let url = `${apiBase}/businesses?skip=${skip}&limit=${limit}`;
+      let url = `${base}/businesses?skip=${skip}&limit=${limit}`;
       if (queryIdParam) url += `&query_id=${queryIdParam}`;
       if (search) url += `&search=${encodeURIComponent(search)}`;
       if (minScore > 0) url += `&min_verification_score=${minScore}`;
@@ -73,9 +85,12 @@ function BusinessesContent() {
   };
 
   const fetchConflicts = async (bizId: number) => {
+    const base = apiBaseRef.current;
+    if (!base) return;
+
     try {
       // List all conflicts
-      const res = await fetch(`${apiBase}/conflicts?resolved=false`);
+      const res = await fetch(`${base}/conflicts?resolved=false`);
       if (res.ok) {
         const data = await res.json();
         // Filter to conflicts for the selected business
@@ -88,9 +103,11 @@ function BusinessesContent() {
   };
 
   const resolveConflict = async (conflictId: number, resolvedValue: string) => {
+    const base = apiBaseRef.current;
+    if (!base) return;
     setConflictResolving(conflictId);
     try {
-      const res = await fetch(`${apiBase}/conflicts/${conflictId}/resolve`, {
+      const res = await fetch(`${base}/conflicts/${conflictId}/resolve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ resolved_value: resolvedValue })
@@ -98,7 +115,7 @@ function BusinessesContent() {
       if (res.ok) {
         // Refresh details
         if (selectedBiz) {
-          const bizRes = await fetch(`${apiBase}/businesses/${selectedBiz.id}`);
+          const bizRes = await fetch(`${base}/businesses/${selectedBiz.id}`);
           if (bizRes.ok) {
             const updatedBiz = await bizRes.json();
             setSelectedBiz(updatedBiz);
@@ -118,6 +135,8 @@ function BusinessesContent() {
 
   // CSV Import handling
   const handleCSVImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const base = apiBaseRef.current;
+    if (!base) return;
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -126,7 +145,7 @@ function BusinessesContent() {
     formData.append("file", file);
 
     try {
-      const res = await fetch(`${apiBase}/businesses/import/csv`, {
+      const res = await fetch(`${base}/businesses/import/csv`, {
         method: "POST",
         body: formData,
       });

@@ -225,6 +225,45 @@ class WebsiteAnalyzer:
             "social_profiles": social_profiles[:5],
         }
 
+    def _is_valid_address(self, candidate: str) -> bool:
+        """Validate that a string actually looks like a physical address, not garbage text."""
+        if not candidate or len(candidate) < 10 or len(candidate) > 200:
+            return False
+        
+        # Reject strings that are clearly not addresses
+        reject_patterns = [
+            r'^(showroom|shop|space|rent|buy|sell|service|product|contact|about|home|menu|login|sign)',
+            r'^(click|view|read|learn|more|get|find|search|browse|explore)',
+            r'^(our |we |the |this |these |those |a |an )',
+            r'^(top |best |leading |premier |no\.\s*1 )',
+        ]
+        candidate_lower = candidate.lower().strip()
+        for pat in reject_patterns:
+            if re.match(pat, candidate_lower):
+                return False
+        
+        # Must contain at least one digit (house number, zip code, etc.) unless it has strong address markers
+        has_digit = bool(re.search(r'\d', candidate))
+        strong_markers = ['street', 'road', 'avenue', 'boulevard', 'lane', 'drive', 
+                         'nagar', 'puram', 'colony', 'complex', 'sector', 'block',
+                         'floor', 'suite', 'building', 'plaza', 'circle', 'highway',
+                         'cross', 'main', 'layout', 'extension', 'phase']
+        has_strong_marker = any(m in candidate_lower for m in strong_markers)
+        
+        if not has_digit and not has_strong_marker:
+            return False
+            
+        # Should contain a comma, or a strong address marker, or a zip/postal code
+        has_comma = ',' in candidate
+        has_zip = bool(re.search(r'\b\d{5,6}\b', candidate))
+        
+        if not has_comma and not has_zip and not has_strong_marker:
+            # Very strict: must look like "Number Something, Something"
+            if not re.match(r'^\d+\s+\w', candidate):
+                return False
+        
+        return True
+
     def _extract_address(self, text: str) -> Optional[str]:
         lines = [l.strip() for l in text.split('\n') if l.strip()]
         
@@ -234,7 +273,7 @@ class WebsiteAnalyzer:
             match = pattern.match(line)
             if match:
                 address_candidate = match.group(1).strip()
-                if len(address_candidate) > 10:
+                if self._is_valid_address(address_candidate):
                     return address_candidate
                 if i + 1 < len(lines):
                     next_line = lines[i+1].strip()
@@ -242,8 +281,11 @@ class WebsiteAnalyzer:
                         if i + 2 < len(lines):
                             next_next_line = lines[i+2].strip()
                             if len(next_next_line) > 5 and (any(kw in next_next_line.lower() for kw in ['india', 'tamil', 'usa', 'state', 'pincode', 'zip', 'country', 'alabama', 'al', 'texas', 'tx']) or re.search(r'\b\d{5,6}\b', next_next_line)):
-                                return f"{next_line}, {next_next_line}"
-                        return next_line
+                                combined = f"{next_line}, {next_next_line}"
+                                if self._is_valid_address(combined):
+                                    return combined
+                        if self._is_valid_address(next_line):
+                            return next_line
                         
         # 2. Look for postal code patterns (5 or 6 digits) on lines with common address markers
         zip_pattern = re.compile(r'\b\d{5}(?:-\d{4})?\b|\b\d{6}\b')
@@ -258,19 +300,20 @@ class WebsiteAnalyzer:
             if zip_pattern.search(line):
                 # If the line contains a zip code and an address marker, return it
                 if any(marker in line.lower() for marker in markers):
-                    if len(line) > 15 and len(line) < 150:
+                    if self._is_valid_address(line):
                         return line
                 # If the previous line contains an address marker, join them!
                 if i > 0:
                     prev_line = lines[i-1].strip()
                     if any(marker in prev_line.lower() for marker in markers):
-                        if len(prev_line) > 5 and len(prev_line) < 100:
-                            return f"{prev_line}, {line}"
+                        combined = f"{prev_line}, {line}"
+                        if self._is_valid_address(combined):
+                            return combined
                             
         # 3. Fallback: look for any line containing a zip code and starting with a number (likely house number)
         for line in lines:
             if zip_pattern.search(line) and re.match(r'^\d+\b', line):
-                if len(line) > 15 and len(line) < 150:
+                if self._is_valid_address(line):
                     return line
                     
         return None
