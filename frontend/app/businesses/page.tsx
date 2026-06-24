@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { 
   Search, SlidersHorizontal, ArrowUpDown, ChevronLeft, ChevronRight, 
   Download, Upload, ShieldCheck, Mail, Globe, Phone, MapPin, X, 
@@ -8,7 +9,10 @@ import {
 } from "lucide-react";
 import { getApiUrl } from "../apiConfig";
 
-export default function BusinessesPage() {
+function BusinessesContent() {
+  const searchParams = useSearchParams();
+  const queryIdParam = searchParams.get("query_id");
+
   // API base state to prevent SSR hydration mismatch
   const [apiBase, setApiBase] = useState("http://localhost:8000/api");
 
@@ -39,7 +43,7 @@ export default function BusinessesPage() {
 
   useEffect(() => {
     fetchBusinesses();
-  }, [search, minScore, sortBy, page]);
+  }, [search, minScore, sortBy, page, apiBase, queryIdParam]);
 
   useEffect(() => {
     if (selectedBiz) {
@@ -52,6 +56,7 @@ export default function BusinessesPage() {
     try {
       const skip = (page - 1) * limit;
       let url = `${apiBase}/businesses?skip=${skip}&limit=${limit}`;
+      if (queryIdParam) url += `&query_id=${queryIdParam}`;
       if (search) url += `&search=${encodeURIComponent(search)}`;
       if (minScore > 0) url += `&min_verification_score=${minScore}`;
       
@@ -109,6 +114,7 @@ export default function BusinessesPage() {
       setConflictResolving(null);
     }
   };
+
 
   // CSV Import handling
   const handleCSVImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -540,5 +546,17 @@ export default function BusinessesPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function BusinessesPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-[400px]">
+        <RefreshCw className="h-8 w-8 animate-spin text-indigo-500" />
+      </div>
+    }>
+      <BusinessesContent />
+    </Suspense>
   );
 }
