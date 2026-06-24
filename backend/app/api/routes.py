@@ -382,3 +382,23 @@ async def import_csv(file: UploadFile = File(...), db: Session = Depends(get_db)
         
     db.commit()
     return {"message": f"Successfully imported {imported_count} business records."}
+
+
+@router.get("/debug/test-search")
+def test_search_endpoint():
+    import urllib.request
+    import urllib.parse
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Origin": "https://html.duckduckgo.com",
+        "Referer": "https://html.duckduckgo.com/"
+    }
+    url = "https://html.duckduckgo.com/html/?q=dentists+in+austin"
+    req = urllib.request.Request(url, headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=10.0) as response:
+            html = response.read()
+            return {"status": "success", "length": len(html), "preview": html[:500].decode("utf-8", errors="ignore")}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
