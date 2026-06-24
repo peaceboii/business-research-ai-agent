@@ -88,8 +88,58 @@ class WebsiteAnalyzer:
         soup = BeautifulSoup(html_content, "html.parser")
         data = self._parse_html(soup, html_content)
         data["used_playwright"] = used_playwright
+
+        # If address or phone is missing, follow contact/locations page to be thorough
+        if not data.get("address") or not data.get("phone"):
+            contact_url = self._find_contact_link(soup, url)
+            if contact_url:
+                logger.info(f"WebsiteAnalyzer: Address/phone missing on homepage. Crawling contact/locations: {contact_url}")
+                try:
+                    contact_html = ""
+                    if used_playwright:
+                        contact_html = await self._fetch_with_playwright(contact_url)
+                    else:
+                        headers = {
+                            "User-Agent": get_random_user_agent(),
+                            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+                        }
+                        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
+                            res = await client.get(contact_url, headers=headers)
+                            if res.status_code == 200:
+                                contact_html = res.text
+                    
+                    if contact_html:
+                        contact_soup = BeautifulSoup(contact_html, "html.parser")
+                        contact_data = self._parse_html(contact_soup, contact_html)
+                        
+                        # Merge fields if missing
+                        for field in ["phone", "email", "address", "working_hours"]:
+                            if not data.get(field) and contact_data.get(field):
+                                data[field] = contact_data[field]
+                        
+                        # Merge list fields
+                        for field in ["services", "specialties", "certifications", "awards", "social_profiles"]:
+                            if contact_data.get(field):
+                                merged = list(set(data.get(field, []) + contact_data[field]))
+                                data[field] = merged[:10]
+                except Exception as e:
+                    logger.warning(f"WebsiteAnalyzer: Failed to crawl contact page {contact_url}: {e}")
+
         logger.info(f"WebsiteAnalyzer: Extraction successful for {url}. Extracted phone: {data.get('phone')}, email: {data.get('email')}")
         return data
+
+    def _find_contact_link(self, soup: BeautifulSoup, base_url: str) -> Optional[str]:
+        from urllib.parse import urljoin
+        keywords = ["contact", "location", "address", "find-us", "reach-us", "about"]
+        for a in soup.find_all("a", href=True):
+            href = a["href"].strip()
+            text = a.get_text(strip=True).lower()
+            if not href or href.startswith("#") or href.startswith("javascript:") or href.startswith("tel:") or href.startswith("mailto:"):
+                continue
+            if any(kw in text or kw in href.lower() for kw in keywords):
+                return urljoin(base_url, a["href"])
+        return None
+
 
     async def _fetch_with_playwright(self, url: str) -> str:
         """
@@ -178,8 +228,8 @@ class WebsiteAnalyzer:
     def _extract_address(self, text: str) -> Optional[str]:
         lines = [l.strip() for l in text.split('\n') if l.strip()]
         
-        # Try looking for "Address" keyword explicitly (excluding contact labels)
-        pattern = re.compile(r'\b(?:address|location|office|hq|headquarters)\b\s*:?\s*(.*)', re.IGNORECASE)
+        # 1. Try looking for "Address" or "Location" keyword explicitly
+        pattern = re.compile(r'\b(?:address|location|office|hq|headquarters|clinic|hospital)\b\s*:?\s*(.*)', re.IGNORECASE)
         for i, line in enumerate(lines):
             match = pattern.match(line)
             if match:
@@ -188,20 +238,41 @@ class WebsiteAnalyzer:
                     return address_candidate
                 if i + 1 < len(lines):
                     next_line = lines[i+1].strip()
-                    if len(next_line) > 10 and not any(kw in next_line.lower() for kw in ['phone', 'email', 'website', 'fax']):
+                    if len(next_line) > 10 and not any(kw in next_line.lower() for kw in ['phone', 'email', 'website', 'fax', 'social']):
                         if i + 2 < len(lines):
                             next_next_line = lines[i+2].strip()
-                            if len(next_next_line) > 5 and (any(kw in next_next_line.lower() for kw in ['india', 'tamil', 'usa', 'state', 'pincode', 'zip', 'country']) or re.search(r'\b\d{5,6}\b', next_next_line)):
+                            if len(next_next_line) > 5 and (any(kw in next_next_line.lower() for kw in ['india', 'tamil', 'usa', 'state', 'pincode', 'zip', 'country', 'alabama', 'al', 'texas', 'tx']) or re.search(r'\b\d{5,6}\b', next_next_line)):
                                 return f"{next_line}, {next_next_line}"
                         return next_line
                         
-        # Alternate fallback: look for postal code patterns (5 or 6 digits) on lines with address indicators
-        zip_pattern = re.compile(r'\b\d{5,6}\b')
-        for line in lines:
+        # 2. Look for postal code patterns (5 or 6 digits) on lines with common address markers
+        zip_pattern = re.compile(r'\b\d{5}(?:-\d{4})?\b|\b\d{6}\b')
+        markers = [
+            'street', 'road', 'st', 'rd', 'ave', 'blvd', 'lane', 'ln', 'drive', 'dr', 'way', 'court', 'ct', 
+            'boulevard', 'highway', 'hwy', 'parkway', 'pkwy', 'suite', 'ste', 'plaza', 'circle', 'cir', 
+            'loop', 'square', 'sq', 'floor', 'fl', 'building', 'bldg', 'box', 'po box', 'suite', 'nagar', 
+            'complex', 'puram', 'colony'
+        ]
+        
+        for i, line in enumerate(lines):
             if zip_pattern.search(line):
-                if any(marker in line.lower() for marker in ['street', 'road', 'nagar', 'complex', 'building', 'floor', 'block', 'st.', 'rd.', 'ave', 'highway', 'puram', 'colony', 'plaza']):
+                # If the line contains a zip code and an address marker, return it
+                if any(marker in line.lower() for marker in markers):
                     if len(line) > 15 and len(line) < 150:
                         return line
+                # If the previous line contains an address marker, join them!
+                if i > 0:
+                    prev_line = lines[i-1].strip()
+                    if any(marker in prev_line.lower() for marker in markers):
+                        if len(prev_line) > 5 and len(prev_line) < 100:
+                            return f"{prev_line}, {line}"
+                            
+        # 3. Fallback: look for any line containing a zip code and starting with a number (likely house number)
+        for line in lines:
+            if zip_pattern.search(line) and re.match(r'^\d+\b', line):
+                if len(line) > 15 and len(line) < 150:
+                    return line
+                    
         return None
 
     def _extract_working_hours(self, text: str) -> Dict[str, str]:
