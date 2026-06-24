@@ -6,13 +6,14 @@ import {
   Download, Upload, ShieldCheck, Mail, Globe, Phone, MapPin, X, 
   AlertTriangle, Check, RefreshCw, Star, Clock, FileText, Award, BadgeCheck 
 } from "lucide-react";
+import { getApiUrl } from "../apiConfig";
 
 export default function BusinessesPage() {
   // API base state to prevent SSR hydration mismatch
   const [apiBase, setApiBase] = useState("http://localhost:8000/api");
 
   useEffect(() => {
-    setApiBase(`http://${window.location.hostname}:8000/api`);
+    setApiBase(getApiUrl());
   }, []);
 
   // Query state

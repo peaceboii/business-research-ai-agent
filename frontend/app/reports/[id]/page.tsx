@@ -10,6 +10,7 @@ import {
   ShieldCheck, Trash2, Clock, Globe, ArrowLeft, Loader2, FileText, CheckCircle2 
 } from "lucide-react";
 import { marked } from "marked";
+import { getApiUrl } from "../../apiConfig";
 
 interface Report {
   id: number;
@@ -44,7 +45,7 @@ export default function ReportPage({ params: paramsPromise }: { params: Promise<
     setLoading(true);
     try {
       // Fetch report
-      const repRes = await fetch(`http://${window.location.hostname}:8000/api/reports/${queryId}`);
+      const repRes = await fetch(`${getApiUrl()}/reports/${queryId}`);
       let repData = null;
       if (repRes.ok) {
         repData = await repRes.json();
@@ -52,7 +53,7 @@ export default function ReportPage({ params: paramsPromise }: { params: Promise<
       }
 
       // Fetch all businesses for this query to build charts
-      const bizRes = await fetch(`http://${window.location.hostname}:8000/api/businesses?query_id=${queryId}&limit=500`);
+      const bizRes = await fetch(`${getApiUrl()}/businesses?query_id=${queryId}&limit=500`);
       if (bizRes.ok) {
         const bizData = await bizRes.json();
         setBusinesses(bizData);

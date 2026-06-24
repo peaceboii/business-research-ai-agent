@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Play, Calendar, CheckCircle2, AlertCircle, ArrowRight, Loader2, Sparkles, Clock, Trash } from "lucide-react";
+import { getApiUrl } from "./apiConfig";
 
 interface StatItem {
   total_queries: number;
@@ -18,12 +19,7 @@ interface StatItem {
   }>;
 }
 
-const getApiBase = () => {
-  if (typeof window !== "undefined") {
-    return `http://${window.location.hostname}:8000/api`;
-  }
-  return "http://127.0.0.1:8000/api";
-};
+
 
 export default function Dashboard() {
   const router = useRouter();
@@ -46,7 +42,7 @@ export default function Dashboard() {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch(`${getApiBase()}/stats`);
+      const res = await fetch(`${getApiUrl()}/stats`);
       if (res.ok) {
         const data = await res.json();
         setStats(data);
@@ -62,7 +58,7 @@ export default function Dashboard() {
     if (!searchQuery.trim()) return;
     setLoading(true);
     try {
-      const res = await fetch(`${getApiBase()}/research`, {
+      const res = await fetch(`${getApiUrl()}/research`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query: searchQuery }),

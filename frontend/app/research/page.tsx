@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Loader2, CheckCircle2, Search, ArrowRight, ShieldCheck, HelpCircle, Terminal } from "lucide-react";
+import { getApiUrl } from "../apiConfig";
 
 function ResearchContent() {
   const searchParams = useSearchParams();
@@ -25,7 +26,7 @@ function ResearchContent() {
     if (!queryId) return;
 
     // Connect to SSE stream
-    const eventSource = new EventSource(`http://${window.location.hostname}:8000/api/research/${queryId}/stream`);
+    const eventSource = new EventSource(`${getApiUrl()}/research/${queryId}/stream`);
 
     eventSource.onmessage = (event) => {
       try {
