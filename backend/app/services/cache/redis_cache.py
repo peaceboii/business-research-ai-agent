@@ -12,20 +12,30 @@ class CacheService:
         self._init_redis()
 
     def _init_redis(self):
+        redis_url = os.getenv("REDIS_URL")
         redis_host = os.getenv("REDIS_HOST", "127.0.0.1")
         redis_port = int(os.getenv("REDIS_PORT", 6379))
         redis_db = int(os.getenv("REDIS_DB", 0))
         
         try:
             import redis
-            self.redis_client = redis.Redis(
-                host=redis_host,
-                port=redis_port,
-                db=redis_db,
-                decode_responses=True,
-                socket_connect_timeout=2.0,
-                socket_timeout=2.0
-            )
+            if redis_url:
+                logger.info("CacheService: Connecting to Redis via URL...")
+                self.redis_client = redis.Redis.from_url(
+                    redis_url,
+                    decode_responses=True,
+                    socket_connect_timeout=2.0,
+                    socket_timeout=2.0
+                )
+            else:
+                self.redis_client = redis.Redis(
+                    host=redis_host,
+                    port=redis_port,
+                    db=redis_db,
+                    decode_responses=True,
+                    socket_connect_timeout=2.0,
+                    socket_timeout=2.0
+                )
             # Ping to verify connection
             self.redis_client.ping()
             logger.info("CacheService: Successfully connected to Redis.")
