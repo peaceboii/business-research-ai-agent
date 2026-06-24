@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 import httpx
 from loguru import logger
 from app.utils.http_utils import get_random_user_agent, check_robots_txt
+from app.utils.extraction_utils import extract_phone_from_text, extract_address_from_text
 
 class WebsiteAnalyzer:
     def __init__(self):
@@ -170,18 +171,7 @@ class WebsiteAnalyzer:
         text_content = soup.get_text("\n")
         
         # Phone extraction
-        phones = []
-        for match in self.phone_pattern.finditer(text_content):
-            if match.group(1) and match.group(2) and match.group(3):
-                formatted = f"({match.group(1)}) {match.group(2)}-{match.group(3)}"
-            else:
-                num = match.group(0).strip()
-                num = re.sub(r'^[^\d+({]+|[^\d)]+$', '', num)
-                formatted = num
-            if len(re.sub(r'\D', '', formatted)) >= 7:
-                phones.append(formatted)
-        
-        phone = phones[0] if phones else None
+        phone = extract_phone_from_text(text_content)
 
         # Email extraction
         emails = self.email_pattern.findall(text_content)
@@ -265,58 +255,7 @@ class WebsiteAnalyzer:
         return True
 
     def _extract_address(self, text: str) -> Optional[str]:
-        lines = [l.strip() for l in text.split('\n') if l.strip()]
-        
-        # 1. Try looking for "Address" or "Location" keyword explicitly
-        pattern = re.compile(r'\b(?:address|location|office|hq|headquarters|clinic|hospital)\b\s*:?\s*(.*)', re.IGNORECASE)
-        for i, line in enumerate(lines):
-            match = pattern.match(line)
-            if match:
-                address_candidate = match.group(1).strip()
-                if self._is_valid_address(address_candidate):
-                    return address_candidate
-                if i + 1 < len(lines):
-                    next_line = lines[i+1].strip()
-                    if len(next_line) > 10 and not any(kw in next_line.lower() for kw in ['phone', 'email', 'website', 'fax', 'social']):
-                        if i + 2 < len(lines):
-                            next_next_line = lines[i+2].strip()
-                            if len(next_next_line) > 5 and (any(kw in next_next_line.lower() for kw in ['india', 'tamil', 'usa', 'state', 'pincode', 'zip', 'country', 'alabama', 'al', 'texas', 'tx']) or re.search(r'\b\d{5,6}\b', next_next_line)):
-                                combined = f"{next_line}, {next_next_line}"
-                                if self._is_valid_address(combined):
-                                    return combined
-                        if self._is_valid_address(next_line):
-                            return next_line
-                        
-        # 2. Look for postal code patterns (5 or 6 digits) on lines with common address markers
-        zip_pattern = re.compile(r'\b\d{5}(?:-\d{4})?\b|\b\d{6}\b')
-        markers = [
-            'street', 'road', 'st', 'rd', 'ave', 'blvd', 'lane', 'ln', 'drive', 'dr', 'way', 'court', 'ct', 
-            'boulevard', 'highway', 'hwy', 'parkway', 'pkwy', 'suite', 'ste', 'plaza', 'circle', 'cir', 
-            'loop', 'square', 'sq', 'floor', 'fl', 'building', 'bldg', 'box', 'po box', 'suite', 'nagar', 
-            'complex', 'puram', 'colony'
-        ]
-        
-        for i, line in enumerate(lines):
-            if zip_pattern.search(line):
-                # If the line contains a zip code and an address marker, return it
-                if any(marker in line.lower() for marker in markers):
-                    if self._is_valid_address(line):
-                        return line
-                # If the previous line contains an address marker, join them!
-                if i > 0:
-                    prev_line = lines[i-1].strip()
-                    if any(marker in prev_line.lower() for marker in markers):
-                        combined = f"{prev_line}, {line}"
-                        if self._is_valid_address(combined):
-                            return combined
-                            
-        # 3. Fallback: look for any line containing a zip code and starting with a number (likely house number)
-        for line in lines:
-            if zip_pattern.search(line) and re.match(r'^\d+\b', line):
-                if self._is_valid_address(line):
-                    return line
-                    
-        return None
+        return extract_address_from_text(text)
 
     def _extract_working_hours(self, text: str) -> Dict[str, str]:
         """

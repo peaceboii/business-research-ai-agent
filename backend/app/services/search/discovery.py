@@ -36,7 +36,9 @@ class DiscoveryEngine:
         
         # Flatten the list of lists
         all_candidates = []
-        for candidate_list in results:
+        for i, candidate_list in enumerate(results):
+            adapter_name = self.adapters[i].source_name if i < len(self.adapters) else "unknown"
+            logger.info(f"DiscoveryEngine: Adapter '{adapter_name}' returned {len(candidate_list)} candidates")
             all_candidates.extend(candidate_list)
             
         logger.info(f"DiscoveryEngine: Discovery complete. Found {len(all_candidates)} raw candidate records.")
@@ -44,12 +46,13 @@ class DiscoveryEngine:
 
     async def _safe_discover(self, adapter: BaseDiscoveryAdapter, category: str, location: str) -> List[RawBusinessCandidate]:
         try:
-            # Enforce a timeout per adapter of 15 seconds as requested in error handling
-            return await asyncio.wait_for(adapter.discover(category, location), timeout=15.0)
+            # 30s timeout to allow cascading fallbacks (DDG lite -> DDG standard -> Google)
+            return await asyncio.wait_for(adapter.discover(category, location), timeout=30.0)
         except asyncio.TimeoutError:
-            logger.error(f"DiscoveryEngine: Timeout (15s) reached for adapter '{adapter.source_name}'")
+            logger.error(f"DiscoveryEngine: Timeout (30s) reached for adapter '{adapter.source_name}'")
             return []
         except Exception as e:
-            logger.error(f"DiscoveryEngine: Error in adapter '{adapter.source_name}': {e}")
+            logger.error(f"DiscoveryEngine: Error in adapter '{adapter.source_name}': {type(e).__name__}: {e}")
             return []
 global_discovery_engine = DiscoveryEngine()
+

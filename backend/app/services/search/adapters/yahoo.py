@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 from typing import List
 from loguru import logger
 from app.services.search.adapters.base import BaseDiscoveryAdapter, RawBusinessCandidate
+from app.utils.extraction_utils import extract_phone_from_text, extract_address_from_text
 
 class YahooAdapter(BaseDiscoveryAdapter):
     @property
@@ -50,9 +51,11 @@ class YahooAdapter(BaseDiscoveryAdapter):
                 clean_link = raw_link
                 if "RU=" in raw_link:
                     try:
-                        match = re.search(r'RU=([^/&]+)', raw_link)
-                        if match:
-                            clean_link = urllib.parse.unquote(match.group(1))
+                        ru_part = raw_link.split("RU=")[1]
+                        for term in ["/RK=", "/RS=", "&"]:
+                            if term in ru_part:
+                                ru_part = ru_part.split(term)[0]
+                        clean_link = urllib.parse.unquote(ru_part)
                     except Exception:
                         pass
 
@@ -90,34 +93,9 @@ class YahooAdapter(BaseDiscoveryAdapter):
                 if is_directory_list:
                     continue
 
-                # Parse phone number from snippet
-                phone = None
-                phone_match = re.search(
-                    r'(?:\+?91|0)?[-\s]?[6-9]\d{4}[-\s]?\d{5}'
-                    r'|'
-                    r'(?:\+?91|0)?[-\s]?\d{2,5}[-\s]?\d{6,8}'
-                    r'|'
-                    r'\+?1?\s*\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}'
-                    r'|'
-                    r'\+?[0-9]{1,4}[-.\s]?\(?[0-9]{2,5}\)?[-.\s]?[0-9]{3,4}[-.\s]?[0-9]{3,6}',
-                    snippet
-                )
-                if phone_match:
-                    phone = phone_match.group(0).strip()
-
-                # Parse address from snippet
-                address = None
-                address_match = re.search(r'\b\d+\s+[A-Za-z0-9\s,\.]+,\s*[A-Z]{2}\s+\d{5}\b', snippet)
-                if address_match:
-                    address = address_match.group(0).strip()
-                else:
-                    general_match = re.search(
-                        r'\b\d*[A-Za-z0-9\s,\.]+(?:Road|Rd|Street|St|Nagar|Puram|Complex|Bldg|Building|Floor|Block|Colony|Plaza|Sector|Zone)[A-Za-z0-9\s,\.]+\b\d{5,6}\b',
-                        snippet,
-                        re.IGNORECASE
-                    )
-                    if general_match:
-                        address = general_match.group(0).strip()
+                # Parse phone number and address from snippet
+                phone = extract_phone_from_text(snippet)
+                address = extract_address_from_text(snippet)
 
                 clean_name = title_text
                 clean_name = re.split(r' \| | - |: ', clean_name)[0].strip()

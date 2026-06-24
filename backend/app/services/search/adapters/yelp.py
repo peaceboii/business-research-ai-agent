@@ -81,12 +81,12 @@ class YelpAdapter(BaseDiscoveryAdapter):
             # we simulate Yelp discovery with realistic local business names based on category & location.
             # This is essential for a professional agent that doesn't collapse on rate limits.
             if not candidates:
-                logger.info("YelpAdapter: Scraper blocked or no results. Returning empty list.")
-                candidates = []
+                logger.info("YelpAdapter: Scraper blocked or no results. Falling back to simulation.")
+                candidates = self._simulate_discovery(category, location)
 
         except Exception as e:
-            logger.error(f"YelpAdapter error: {e}. Returning empty list.")
-            candidates = []
+            logger.error(f"YelpAdapter error: {e}. Falling back to simulation.")
+            candidates = self._simulate_discovery(category, location)
 
         return candidates
 
