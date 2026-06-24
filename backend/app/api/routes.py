@@ -388,17 +388,39 @@ async def import_csv(file: UploadFile = File(...), db: Session = Depends(get_db)
 def test_search_endpoint():
     import urllib.request
     import urllib.parse
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Origin": "https://html.duckduckgo.com",
-        "Referer": "https://html.duckduckgo.com/"
-    }
-    url = "https://html.duckduckgo.com/html/?q=dentists+in+austin"
-    req = urllib.request.Request(url, headers=headers)
+    
+    results = {}
+    
+    # Test 1: Google
     try:
-        with urllib.request.urlopen(req, timeout=10.0) as response:
-            html = response.read()
-            return {"status": "success", "length": len(html), "preview": html[:500].decode("utf-8", errors="ignore")}
+        req = urllib.request.Request("https://www.google.com", headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=5.0) as response:
+            results["google"] = {"status": "success", "code": response.status}
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        results["google"] = {"status": "error", "message": str(e)}
+
+    # Test 2: Httpbin
+    try:
+        req = urllib.request.Request("https://httpbin.org/get", headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=5.0) as response:
+            results["httpbin"] = {"status": "success", "code": response.status}
+    except Exception as e:
+        results["httpbin"] = {"status": "error", "message": str(e)}
+
+    # Test 3: DuckDuckGo
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Origin": "https://html.duckduckgo.com",
+            "Referer": "https://html.duckduckgo.com/"
+        }
+        url = "https://html.duckduckgo.com/html/?q=dentists+in+austin"
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=5.0) as response:
+            results["duckduckgo"] = {"status": "success", "code": response.status}
+    except Exception as e:
+        results["duckduckgo"] = {"status": "error", "message": str(e)}
+
+    return results
+
 
