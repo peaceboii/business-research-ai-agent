@@ -21,6 +21,21 @@ ROBOTS_CACHE: Dict[str, RobotFileParser] = {}
 ROBOTS_CACHE_TIME: Dict[str, float] = {}
 CACHE_TTL = 3600  # 1 hour
 
+async def is_domain_resolvable(url: str) -> bool:
+    import socket
+    try:
+        parsed = urlparse(url)
+        hostname = parsed.hostname
+        if not hostname:
+            return False
+        # Resolve in thread pool to avoid blocking the event loop
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, socket.gethostbyname, hostname)
+        return True
+    except Exception:
+        return False
+
+
 def get_random_user_agent() -> str:
     return random.choice(USER_AGENTS)
 

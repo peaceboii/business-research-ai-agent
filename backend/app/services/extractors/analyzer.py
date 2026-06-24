@@ -4,7 +4,7 @@ from typing import Dict, Any, List, Optional
 from bs4 import BeautifulSoup
 import httpx
 from loguru import logger
-from app.utils.http_utils import get_random_user_agent, check_robots_txt
+from app.utils.http_utils import get_random_user_agent, check_robots_txt, is_domain_resolvable
 from app.utils.extraction_utils import extract_phone_from_text, extract_address_from_text
 
 class WebsiteAnalyzer:
@@ -28,6 +28,7 @@ class WebsiteAnalyzer:
             "facebook.com", "linkedin.com", "twitter.com", "x.com", 
             "instagram.com", "youtube.com", "pinterest.com", "yelp.com"
         ]
+        self._playwright_semaphore = None
 
     async def analyze_website(self, url: str) -> Dict[str, Any]:
         """
@@ -40,6 +41,12 @@ class WebsiteAnalyzer:
 
         if not url.startswith("http"):
             url = "https://" + url
+
+        # Check domain resolvability first to skip non-existent/simulated domains
+        resolvable = await is_domain_resolvable(url)
+        if not resolvable:
+            logger.warning(f"WebsiteAnalyzer: Domain {url} is not resolvable. Skipping analysis.")
+            return {}
 
         logger.info(f"WebsiteAnalyzer: Starting analysis for {url}")
         
@@ -146,33 +153,37 @@ class WebsiteAnalyzer:
         """
         Loads the site using Playwright to render client-side JS.
         """
-        from playwright.async_api import async_playwright
-        
-        logger.info(f"WebsiteAnalyzer: Launching Playwright browser for {url}")
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(
-                headless=True,
-                args=[
-                    "--no-sandbox",
-                    "--disable-setuid-sandbox",
-                    "--disable-dev-shm-usage"
-                ]
-            )
-            context = await browser.new_context(
-                user_agent=get_random_user_agent(),
-                viewport={"width": 1280, "height": 800}
-            )
-            page = await context.new_page()
-            try:
-                # Wait up to 15s for the page to load
-                await page.goto(url, wait_until="domcontentloaded", timeout=15000)
-                # Additional wait to let AJAX run
-                await asyncio.sleep(3)
-                content = await page.content()
-                return content
-            finally:
-                await context.close()
-                await browser.close()
+        if self._playwright_semaphore is None:
+            self._playwright_semaphore = asyncio.Semaphore(1)
+
+        async with self._playwright_semaphore:
+            from playwright.async_api import async_playwright
+            
+            logger.info(f"WebsiteAnalyzer: Launching Playwright browser for {url}")
+            async with async_playwright() as p:
+                browser = await p.chromium.launch(
+                    headless=True,
+                    args=[
+                        "--no-sandbox",
+                        "--disable-setuid-sandbox",
+                        "--disable-dev-shm-usage"
+                    ]
+                )
+                context = await browser.new_context(
+                    user_agent=get_random_user_agent(),
+                    viewport={"width": 1280, "height": 800}
+                )
+                page = await context.new_page()
+                try:
+                    # Wait up to 15s for the page to load
+                    await page.goto(url, wait_until="domcontentloaded", timeout=15000)
+                    # Additional wait to let AJAX run
+                    await asyncio.sleep(3)
+                    content = await page.content()
+                    return content
+                finally:
+                    await context.close()
+                    await browser.close()
 
     def _parse_html(self, soup: BeautifulSoup, raw_html: str) -> Dict[str, Any]:
         text_content = soup.get_text("\n")
