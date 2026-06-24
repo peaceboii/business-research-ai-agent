@@ -22,12 +22,8 @@ ROBOTS_CACHE_TIME: Dict[str, float] = {}
 CACHE_TTL = 3600  # 1 hour
 
 def get_random_user_agent() -> str:
-    try:
-        from fake_useragent import UserAgent
-        ua = UserAgent()
-        return ua.random
-    except Exception:
-        return random.choice(USER_AGENTS)
+    return random.choice(USER_AGENTS)
+
 
 async def check_robots_txt(url: str, user_agent: str = "*") -> bool:
     """
