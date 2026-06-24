@@ -407,7 +407,7 @@ def test_search_endpoint():
     except Exception as e:
         results["httpbin"] = {"status": "error", "message": str(e)}
 
-    # Test 3: DuckDuckGo
+    # Test 3: DuckDuckGo HTML
     try:
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -417,10 +417,37 @@ def test_search_endpoint():
         url = "https://html.duckduckgo.com/html/?q=dentists+in+austin"
         req = urllib.request.Request(url, headers=headers)
         with urllib.request.urlopen(req, timeout=5.0) as response:
-            results["duckduckgo"] = {"status": "success", "code": response.status}
+            results["duckduckgo_html"] = {"status": "success", "code": response.status}
     except Exception as e:
-        results["duckduckgo"] = {"status": "error", "message": str(e)}
+        results["duckduckgo_html"] = {"status": "error", "message": str(e)}
+
+    # Test 4: DuckDuckGo Lite
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+        url = "https://lite.duckduckgo.com/lite/"
+        # Lite version needs post data: q=dentists+in+austin
+        data = urllib.parse.urlencode({"q": "dentists in austin"}).encode("utf-8")
+        req = urllib.request.Request(url, data=data, headers=headers)
+        with urllib.request.urlopen(req, timeout=5.0) as response:
+            results["duckduckgo_lite"] = {"status": "success", "code": response.status}
+    except Exception as e:
+        results["duckduckgo_lite"] = {"status": "error", "message": str(e)}
+
+    # Test 5: Bing
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+        url = "https://www.bing.com/search?q=dentists+in+austin"
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=5.0) as response:
+            results["bing"] = {"status": "success", "code": response.status}
+    except Exception as e:
+        results["bing"] = {"status": "error", "message": str(e)}
 
     return results
+
 
 
