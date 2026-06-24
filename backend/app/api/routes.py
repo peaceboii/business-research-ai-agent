@@ -447,7 +447,20 @@ def test_search_endpoint():
     except Exception as e:
         results["bing"] = {"status": "error", "message": str(e)}
 
+    # Test 6: Yahoo
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+        url = "https://search.yahoo.com/search?p=dentists+in+austin"
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=5.0) as response:
+            results["yahoo"] = {"status": "success", "code": response.status}
+    except Exception as e:
+        results["yahoo"] = {"status": "error", "message": str(e)}
+
     return results
+
 
 
 
