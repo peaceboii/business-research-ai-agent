@@ -9,6 +9,7 @@ import {
 import { 
   ShieldCheck, Trash2, Clock, Globe, ArrowLeft, Loader2, FileText, CheckCircle2 
 } from "lucide-react";
+import { marked } from "marked";
 
 interface Report {
   id: number;
@@ -147,15 +148,13 @@ export default function ReportPage({ params: paramsPromise }: { params: Promise<
   // Parse markdown basic bolding/bullet formatting to display nicely in Tailwind UI
   const formatReportMarkdown = (md: string) => {
     if (!md) return "";
-    return md
-      .replace(/^# (.*)$/gm, '<h1 class="text-2xl font-bold text-white mt-6 mb-4">$1</h1>')
-      .replace(/^## (.*)$/gm, '<h2 class="text-xl font-semibold text-white mt-5 mb-3 border-b border-slate-800 pb-2">$1</h2>')
-      .replace(/^### (.*)$/gm, '<h3 class="text-lg font-medium text-slate-200 mt-4 mb-2">$1</h3>')
-      .replace(/^\* (.*)$/gm, '<li class="ml-4 list-disc text-slate-300 py-1">$1</li>')
-      .replace(/^\| (.*) \|$/gm, '<tr class="border-b border-slate-800">$1</tr>')
-      .replace(/__(.*?)__/g, '<strong>$1</strong>')
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\n\n/g, '<br/>');
+    try {
+      const html = marked.parse(md);
+      return typeof html === "string" ? html : md.replace(/\n/g, "<br/>");
+    } catch (e) {
+      console.error("Failed to parse markdown with marked", e);
+      return md.replace(/\n/g, "<br/>");
+    }
   };
 
   return (

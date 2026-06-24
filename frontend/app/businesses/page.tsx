@@ -334,8 +334,14 @@ export default function BusinessesPage() {
 
       {/* Slide-over Side Drawer Detail Panel */}
       {selectedBiz && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm transition-opacity">
-          <div className="w-full max-w-2xl bg-slate-950 border-l border-slate-800 h-full flex flex-col shadow-2xl relative animate-in slide-in-from-right duration-300">
+        <div 
+          onClick={() => setSelectedBiz(null)}
+          className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm transition-opacity cursor-pointer"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-2xl bg-slate-950 border-l border-slate-800 h-full flex flex-col shadow-2xl relative animate-in slide-in-from-right duration-300 cursor-default"
+          >
             {/* Drawer Header */}
             <div className="p-6 border-b border-slate-800 flex justify-between items-start bg-slate-900/40">
               <div className="space-y-1 max-w-[85%]">
